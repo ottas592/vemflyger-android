@@ -39,9 +39,9 @@ public class MainActivity extends Activity {
     private static final long REFRESH_MS = 20_000L;
 
     private static final String PREFS = "vemflyger_settings";
-
-    private static final double DEFAULT_LAT = 59.633810;
-    private static final double DEFAULT_LON = 17.915602;
+ 
+    private static final double DEFAULT_LAT = 59.526499;
+    private static final double DEFAULT_LON = 17.894627;
     private static final double DEFAULT_RADIUS_KM = 5.0;
 
     private final Handler handler =
