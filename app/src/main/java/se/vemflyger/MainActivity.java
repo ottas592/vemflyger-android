@@ -58,40 +58,24 @@ public class MainActivity extends Activity {
     private String lastRouteCallsign = "";
     private RouteInfo lastRoute = null;
 
-
     private final Runnable refreshRunnable =
             new Runnable() {
-
                 @Override
                 public void run() {
-
                     refreshAircraft();
-
-                    handler.postDelayed(
-                            this,
-                            REFRESH_MS
-                    );
+                    handler.postDelayed(this, REFRESH_MS);
                 }
             };
 
-
     @Override
-    protected void onCreate(
-            Bundle savedInstanceState
-    ) {
-
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        prefs =
-                getSharedPreferences(
-                        PREFS,
-                        MODE_PRIVATE
-                );
+        prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
 
         configureWindow();
 
-        wallView =
-                new FlightWallView(this);
+        wallView = new FlightWallView(this);
 
         wallView.setOnLongPressListener(
                 this::showSettings
@@ -104,128 +88,77 @@ public class MainActivity extends Activity {
         setContentView(wallView);
     }
 
-
     @Override
     protected void onResume() {
-
         super.onResume();
 
-        handler.removeCallbacks(
-                refreshRunnable
-        );
-
-        handler.post(
-                refreshRunnable
-        );
+        handler.removeCallbacks(refreshRunnable);
+        handler.post(refreshRunnable);
     }
-
 
     @Override
     protected void onPause() {
-
-        handler.removeCallbacks(
-                refreshRunnable
-        );
-
+        handler.removeCallbacks(refreshRunnable);
         super.onPause();
     }
 
-
     @Override
     protected void onDestroy() {
-
         executor.shutdownNow();
-
         super.onDestroy();
     }
 
-
     private void configureWindow() {
-
-        Window window =
-                getWindow();
+        Window window = getWindow();
 
         window.setStatusBarColor(
-                Color.rgb(
-                        7,
-                        17,
-                        31
-                )
+                Color.rgb(7, 17, 31)
         );
 
         window.setNavigationBarColor(
-                Color.rgb(
-                        7,
-                        17,
-                        31
-                )
+                Color.rgb(7, 17, 31)
         );
 
         window.addFlags(
-                WindowManager
-                        .LayoutParams
-                        .FLAG_KEEP_SCREEN_ON
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
         );
 
-        window.getDecorView()
-                .setSystemUiVisibility(
-
-                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
-
-                        View.SYSTEM_UI_FLAG_FULLSCREEN |
-
-                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-
-                        View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-
-                        View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-
-                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                );
+        window.getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        | View.SYSTEM_UI_FLAG_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        );
     }
-
 
     private double latitude() {
-
         return Double.longBitsToDouble(
-
                 prefs.getLong(
                         "lat",
-                        Double.doubleToLongBits(
-                                DEFAULT_LAT
-                        )
+                        Double.doubleToLongBits(DEFAULT_LAT)
                 )
         );
     }
-
 
     private double longitude() {
-
         return Double.longBitsToDouble(
-
                 prefs.getLong(
                         "lon",
-                        Double.doubleToLongBits(
-                                DEFAULT_LON
-                        )
+                        Double.doubleToLongBits(DEFAULT_LON)
                 )
         );
     }
-
 
     private double radiusKm() {
-
         return Double.longBitsToDouble(
-
                 prefs.getLong(
                         "radius",
-                        Double.doubleToLongBits(
-                                DEFAULT_RADIUS_KM
-                        )
+                        Double.doubleToLongBits(DEFAULT_RADIUS_KM)
                 )
         );
     }
-
 
     private void refreshAircraft() {
 
@@ -235,86 +168,50 @@ public class MainActivity extends Activity {
 
         requestRunning = true;
 
-        final double lat =
-                latitude();
-
-        final double lon =
-                longitude();
-
-        final double radius =
-                radiusKm();
-
+        final double lat = latitude();
+        final double lon = longitude();
+        final double radius = radiusKm();
 
         executor.execute(() -> {
 
             try {
 
-                int nm =
-                        Math.max(
-                                3,
-                                (int) Math.ceil(
-                                        radius / 1.852
-                                )
-                        );
+                int nm = Math.max(
+                        3,
+                        (int) Math.ceil(radius / 1.852)
+                );
 
+                String url = String.format(
+                        Locale.US,
+                        "https://opendata.adsb.fi/api/v3/lat/%.6f/lon/%.6f/dist/%d",
+                        lat,
+                        lon,
+                        nm
+                );
 
-                String url =
-                        String.format(
-                                Locale.US,
-
-                                "https://opendata.adsb.fi/api/v3/lat/%.6f/lon/%.6f/dist/%d",
-
-                                lat,
-                                lon,
-                                nm
-                        );
-
-
-                JSONObject root =
-                        getJson(url);
-
+                JSONObject root = getJson(url);
 
                 JSONArray aircraft =
-                        root.optJSONArray(
-                                "ac"
-                        );
-
+                        root.optJSONArray("ac");
 
                 if (aircraft == null) {
-
-                    aircraft =
-                            root.optJSONArray(
-                                    "aircraft"
-                            );
+                    aircraft = root.optJSONArray("aircraft");
                 }
 
-
-                AircraftInfo nearest =
-                        null;
-
+                AircraftInfo nearest = null;
 
                 if (aircraft != null) {
 
-                    for (
-                            int i = 0;
-                            i < aircraft.length();
-                            i++
-                    ) {
+                    for (int i = 0; i < aircraft.length(); i++) {
 
                         JSONObject a =
-                                aircraft.optJSONObject(
-                                        i
-                                );
+                                aircraft.optJSONObject(i);
 
-
-                        if (
-                                a == null ||
-                                !a.has("lat") ||
-                                !a.has("lon")
-                        ) {
+                        if (a == null
+                                || !a.has("lat")
+                                || !a.has("lon")) {
                             continue;
                         }
-
 
                         double aLat =
                                 a.optDouble(
@@ -322,21 +219,16 @@ public class MainActivity extends Activity {
                                         Double.NaN
                                 );
 
-
                         double aLon =
                                 a.optDouble(
                                         "lon",
                                         Double.NaN
                                 );
 
-
-                        if (
-                                !Double.isFinite(aLat) ||
-                                !Double.isFinite(aLon)
-                        ) {
+                        if (!Double.isFinite(aLat)
+                                || !Double.isFinite(aLon)) {
                             continue;
                         }
-
 
                         double distance =
                                 haversineKm(
@@ -346,102 +238,65 @@ public class MainActivity extends Activity {
                                         aLon
                                 );
 
-
-                        if (
-                                distance > radius
-                        ) {
+                        if (distance > radius) {
                             continue;
                         }
 
-
-                        if (
-                                nearest == null ||
-                                distance <
-                                        nearest.distanceKm
-                        ) {
+                        if (nearest == null
+                                || distance < nearest.distanceKm) {
 
                             nearest =
-                                    AircraftInfo
-                                            .fromJson(
-                                                    a,
-                                                    distance
-                                            );
+                                    AircraftInfo.fromJson(
+                                            a,
+                                            distance
+                                    );
                         }
                     }
                 }
 
-
-                if (
-                        nearest == null
-                ) {
+                if (nearest == null) {
 
                     lastRouteCallsign = "";
                     lastRoute = null;
 
-
                     runOnUiThread(
-                            () ->
-                                    wallView
-                                            .setFlight(
-                                                    null,
-                                                    null
-                                            )
+                            () -> wallView.setFlight(
+                                    null,
+                                    null
+                            )
                     );
 
                 } else {
 
-                    RouteInfo route =
-                            null;
-
+                    RouteInfo route = null;
 
                     String cs =
                             nearest.callsign;
 
+                    if (cs != null
+                            && !cs.isEmpty()) {
 
-                    if (
-                            cs != null &&
-                            !cs.isEmpty()
-                    ) {
+                        if (cs.equals(lastRouteCallsign)) {
 
-                        if (
-                                cs.equals(
-                                        lastRouteCallsign
-                                )
-                        ) {
-
-                            route =
-                                    lastRoute;
+                            route = lastRoute;
 
                         } else {
 
-                            route =
-                                    lookupRoute(
-                                            cs
-                                    );
+                            route = lookupRoute(cs);
 
-                            lastRouteCallsign =
-                                    cs;
-
-                            lastRoute =
-                                    route;
+                            lastRouteCallsign = cs;
+                            lastRoute = route;
                         }
                     }
 
-
-                    final AircraftInfo shown =
-                            nearest;
-
-                    final RouteInfo shownRoute =
-                            route;
-
+                    final AircraftInfo shown = nearest;
+                    final RouteInfo shownRoute = route;
 
                     runOnUiThread(
-                            () ->
-                                    wallView
-                                            .setFlight(
-                                                    shown,
-                                                    shownRoute
-                                            )
+                            () -> wallView.setFlight(
+                                    shown,
+                                    shownRoute
+                            )
                     );
                 }
 
@@ -451,74 +306,46 @@ public class MainActivity extends Activity {
 
             } finally {
 
-                requestRunning =
-                        false;
+                requestRunning = false;
             }
         });
     }
 
-
-    private RouteInfo lookupRoute(
-            String callsign
-    ) {
+    private RouteInfo lookupRoute(String callsign) {
 
         try {
 
             String clean =
                     callsign
                             .trim()
-                            .replace(
-                                    " ",
-                                    ""
-                            )
-                            .toUpperCase(
-                                    Locale.US
-                            );
+                            .replace(" ", "")
+                            .toUpperCase(Locale.US);
 
-
-            if (
-                    clean.isEmpty()
-            ) {
+            if (clean.isEmpty()) {
                 return null;
             }
 
-
             JSONObject root =
                     getJson(
-
                             "https://api.adsbdb.com/v0/callsign/"
                                     + clean
                     );
 
-
             JSONObject response =
-                    root.optJSONObject(
-                            "response"
-                    );
+                    root.optJSONObject("response");
 
-
-            if (
-                    response == null
-            ) {
+            if (response == null) {
                 return null;
             }
-
 
             JSONObject f =
-                    response.optJSONObject(
-                            "flightroute"
-                    );
+                    response.optJSONObject("flightroute");
 
-
-            if (
-                    f == null
-            ) {
+            if (f == null) {
                 return null;
             }
 
-
-            return RouteInfo
-                    .fromJson(f);
+            return RouteInfo.fromJson(f);
 
         } catch (Exception e) {
 
@@ -526,30 +353,17 @@ public class MainActivity extends Activity {
         }
     }
 
-
-    private JSONObject getJson(
-            String address
-    ) throws Exception {
+    private JSONObject getJson(String address)
+            throws Exception {
 
         HttpURLConnection conn =
                 (HttpURLConnection)
-                        new URL(
-                                address
-                        )
+                        new URL(address)
                                 .openConnection();
 
-
-        conn.setRequestMethod(
-                "GET"
-        );
-
-        conn.setConnectTimeout(
-                8_000
-        );
-
-        conn.setReadTimeout(
-                8_000
-        );
+        conn.setRequestMethod("GET");
+        conn.setConnectTimeout(8_000);
+        conn.setReadTimeout(8_000);
 
         conn.setRequestProperty(
                 "Accept",
@@ -561,33 +375,22 @@ public class MainActivity extends Activity {
                 "VemFlyger-Android/0.1"
         );
 
-
         int code =
                 conn.getResponseCode();
 
-
         InputStream stream =
-
-                code >= 200 &&
-                code < 300
-
+                code >= 200 && code < 300
                         ? conn.getInputStream()
-
                         : conn.getErrorStream();
-
 
         StringBuilder sb =
                 new StringBuilder();
 
-
-        if (
-                stream != null
-        ) {
+        if (stream != null) {
 
             try (
                     BufferedReader reader =
                             new BufferedReader(
-
                                     new InputStreamReader(
                                             stream,
                                             StandardCharsets.UTF_8
@@ -597,28 +400,15 @@ public class MainActivity extends Activity {
 
                 String line;
 
-                while (
-                        (
-                                line =
-                                        reader.readLine()
-                        ) != null
-                ) {
-
-                    sb.append(
-                            line
-                    );
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line);
                 }
             }
         }
 
-
         conn.disconnect();
 
-
-        if (
-                code < 200 ||
-                code >= 300
-        ) {
+        if (code < 200 || code >= 300) {
 
             throw new Exception(
                     "HTTP "
@@ -628,29 +418,19 @@ public class MainActivity extends Activity {
             );
         }
 
-
-        return new JSONObject(
-                sb.toString()
-        );
+        return new JSONObject(sb.toString());
     }
-
 
     private void showSettings() {
 
         final LinearLayout layout =
-                new LinearLayout(
-                        this
-                );
-
+                new LinearLayout(this);
 
         layout.setOrientation(
                 LinearLayout.VERTICAL
         );
 
-
-        int pad =
-                dp(22);
-
+        int pad = dp(22);
 
         layout.setPadding(
                 pad,
@@ -659,13 +439,11 @@ public class MainActivity extends Activity {
                 0
         );
 
-
         EditText lat =
                 field(
                         "Latitud",
                         latitude()
                 );
-
 
         EditText lon =
                 field(
@@ -673,39 +451,22 @@ public class MainActivity extends Activity {
                         longitude()
                 );
 
-
         EditText radius =
                 field(
                         "Radie (km)",
                         radiusKm()
                 );
 
-
-        layout.addView(
-                lat
-        );
-
-        layout.addView(
-                lon
-        );
-
-        layout.addView(
-                radius
-        );
-
+        layout.addView(lat);
+        layout.addView(lon);
+        layout.addView(radius);
 
         AlertDialog dialog =
+                new AlertDialog.Builder(this)
 
-                new AlertDialog
-                        .Builder(this)
+                        .setTitle("Sökposition")
 
-                        .setTitle(
-                                "Sökposition"
-                        )
-
-                        .setView(
-                                layout
-                        )
+                        .setView(layout)
 
                         .setMessage(
                                 "Håll fingret på skärmen för att öppna denna dialog igen. Ett kort tryck uppdaterar direkt."
@@ -723,134 +484,107 @@ public class MainActivity extends Activity {
 
                         .create();
 
-
         dialog.setOnShowListener(
+                d -> dialog
+                        .getButton(
+                                AlertDialog.BUTTON_POSITIVE
+                        )
+                        .setOnClickListener(
+                                v -> {
 
-                d ->
+                                    try {
 
-                        dialog
-                                .getButton(
-                                        AlertDialog.BUTTON_POSITIVE
-                                )
-
-                                .setOnClickListener(
-
-                                        v -> {
-
-                                            try {
-
-                                                double newLat =
-                                                        Double.parseDouble(
-
-                                                                lat
-                                                                        .getText()
-                                                                        .toString()
-                                                                        .replace(
-                                                                                ',',
-                                                                                '.'
-                                                                        )
-                                                        );
-
-
-                                                double newLon =
-                                                        Double.parseDouble(
-
-                                                                lon
-                                                                        .getText()
-                                                                        .toString()
-                                                                        .replace(
-                                                                                ',',
-                                                                                '.'
-                                                                        )
-                                                        );
-
-
-                                                double newRadius =
-                                                        Double.parseDouble(
-
-                                                                radius
-                                                                        .getText()
-                                                                        .toString()
-                                                                        .replace(
-                                                                                ',',
-                                                                                '.'
-                                                                        )
-                                                        );
-
-
-                                                if (
-                                                        newLat < -90 ||
-                                                        newLat > 90 ||
-                                                        newLon < -180 ||
-                                                        newLon > 180 ||
-                                                        newRadius <= 0 ||
-                                                        newRadius > 50
-                                                ) {
-
-                                                    throw new IllegalArgumentException();
-                                                }
-
-
-                                                prefs.edit()
-
-                                                        .putLong(
-                                                                "lat",
-                                                                Double.doubleToLongBits(
-                                                                        newLat
+                                        double newLat =
+                                                Double.parseDouble(
+                                                        lat.getText()
+                                                                .toString()
+                                                                .replace(
+                                                                        ',',
+                                                                        '.'
                                                                 )
-                                                        )
-
-                                                        .putLong(
-                                                                "lon",
-                                                                Double.doubleToLongBits(
-                                                                        newLon
-                                                                )
-                                                        )
-
-                                                        .putLong(
-                                                                "radius",
-                                                                Double.doubleToLongBits(
-                                                                        newRadius
-                                                                )
-                                                        )
-
-                                                        .apply();
-
-
-                                                lastRouteCallsign = "";
-                                                lastRoute = null;
-
-
-                                                wallView.setFlight(
-                                                        null,
-                                                        null
                                                 );
 
+                                        double newLon =
+                                                Double.parseDouble(
+                                                        lon.getText()
+                                                                .toString()
+                                                                .replace(
+                                                                        ',',
+                                                                        '.'
+                                                                )
+                                                );
 
-                                                dialog.dismiss();
+                                        double newRadius =
+                                                Double.parseDouble(
+                                                        radius.getText()
+                                                                .toString()
+                                                                .replace(
+                                                                        ',',
+                                                                        '.'
+                                                                )
+                                                );
 
+                                        if (newLat < -90
+                                                || newLat > 90
+                                                || newLon < -180
+                                                || newLon > 180
+                                                || newRadius <= 0
+                                                || newRadius > 50) {
 
-                                                refreshAircraft();
-
-
-                                            } catch (Exception ex) {
-
-                                                Toast
-                                                        .makeText(
-                                                                this,
-                                                                "Kontrollera koordinater och radie.",
-                                                                Toast.LENGTH_SHORT
-                                                        )
-                                                        .show();
-                                            }
+                                            throw new IllegalArgumentException();
                                         }
-                                )
-        );
 
+                                        prefs.edit()
+
+                                                .putLong(
+                                                        "lat",
+                                                        Double.doubleToLongBits(
+                                                                newLat
+                                                        )
+                                                )
+
+                                                .putLong(
+                                                        "lon",
+                                                        Double.doubleToLongBits(
+                                                                newLon
+                                                        )
+                                                )
+
+                                                .putLong(
+                                                        "radius",
+                                                        Double.doubleToLongBits(
+                                                                newRadius
+                                                        )
+                                                )
+
+                                                .apply();
+
+                                        lastRouteCallsign = "";
+                                        lastRoute = null;
+
+                                        wallView.setFlight(
+                                                null,
+                                                null
+                                        );
+
+                                        dialog.dismiss();
+
+                                        refreshAircraft();
+
+                                    } catch (Exception ex) {
+
+                                        Toast.makeText(
+                                                this,
+                                                "Kontrollera koordinater och radie.",
+                                                Toast.LENGTH_SHORT
+                                        ).show();
+                                    }
+                                }
+                        )
+        );
 
         dialog.show();
     }
-
 
     private EditText field(
             String hint,
@@ -858,34 +592,17 @@ public class MainActivity extends Activity {
     ) {
 
         EditText edit =
-                new EditText(
-                        this
-                );
+                new EditText(this);
 
-
-        edit.setHint(
-                hint
-        );
-
+        edit.setHint(hint);
 
         edit.setInputType(
-
-                android.text
-                        .InputType
-                        .TYPE_CLASS_NUMBER |
-
-                android.text
-                        .InputType
-                        .TYPE_NUMBER_FLAG_DECIMAL |
-
-                android.text
-                        .InputType
-                        .TYPE_NUMBER_FLAG_SIGNED
+                android.text.InputType.TYPE_CLASS_NUMBER
+                        | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+                        | android.text.InputType.TYPE_NUMBER_FLAG_SIGNED
         );
 
-
         edit.setText(
-
                 String.format(
                         Locale.US,
                         "%.6f",
@@ -893,24 +610,18 @@ public class MainActivity extends Activity {
                 )
         );
 
-
         return edit;
     }
 
-
-    private int dp(
-            int value
-    ) {
+    private int dp(int value) {
 
         return Math.round(
-
-                value *
-                getResources()
+                value
+                        * getResources()
                         .getDisplayMetrics()
                         .density
         );
     }
-
 
     static double haversineKm(
             double lat1,
@@ -919,52 +630,45 @@ public class MainActivity extends Activity {
             double lon2
     ) {
 
-        double r =
-                6371.0088;
-
+        double r = 6371.0088;
 
         double dLat =
                 Math.toRadians(
                         lat2 - lat1
                 );
 
-
         double dLon =
                 Math.toRadians(
                         lon2 - lon1
                 );
 
-
         double q =
-
-                Math.sin(dLat / 2) *
                 Math.sin(dLat / 2)
+                        * Math.sin(dLat / 2)
 
-                +
+                        +
 
-                Math.cos(
-                        Math.toRadians(lat1)
-                )
+                        Math.cos(
+                                Math.toRadians(lat1)
+                        )
 
-                *
+                                *
 
-                Math.cos(
-                        Math.toRadians(lat2)
-                )
+                                Math.cos(
+                                        Math.toRadians(lat2)
+                                )
 
-                *
+                                *
 
-                Math.sin(dLon / 2) *
-                Math.sin(dLon / 2);
+                                Math.sin(dLon / 2)
+                                * Math.sin(dLon / 2);
 
-
-        return 2 *
-                r *
-                Math.asin(
+        return 2
+                * r
+                * Math.asin(
                         Math.sqrt(q)
                 );
     }
-
 
     static String str(
             JSONObject o,
@@ -977,12 +681,10 @@ public class MainActivity extends Activity {
                         ""
                 );
 
-
         return s == null
                 ? ""
                 : s.trim();
     }
-
 
     static final class AircraftInfo {
 
@@ -996,7 +698,6 @@ public class MainActivity extends Activity {
         Double speedKmh;
         Double track;
 
-
         static AircraftInfo fromJson(
                 JSONObject a,
                 double distance
@@ -1005,20 +706,15 @@ public class MainActivity extends Activity {
             AircraftInfo x =
                     new AircraftInfo();
 
-
             x.callsign =
                     str(
                             a,
                             "flight"
                     );
 
-
-            if (
-                    x.callsign.isEmpty()
-            ) {
+            if (x.callsign.isEmpty()) {
 
                 x.callsign =
-
                         str(
                                 a,
                                 "hex"
@@ -1028,13 +724,11 @@ public class MainActivity extends Activity {
                                 );
             }
 
-
             x.registration =
                     str(
                             a,
                             "r"
                     );
-
 
             x.type =
                     str(
@@ -1042,26 +736,17 @@ public class MainActivity extends Activity {
                             "t"
                     );
 
-
             x.distanceKm =
                     distance;
 
-
             Object alt =
-                    a.opt(
-                            "alt_baro"
-                    );
+                    a.opt("alt_baro");
 
-
-            if (
-                    alt instanceof Number
-            ) {
+            if (alt instanceof Number) {
 
                 x.altitudeM =
-
                         ((Number) alt)
                                 .doubleValue()
-
                                 * 0.3048;
 
             } else if (
@@ -1070,14 +755,11 @@ public class MainActivity extends Activity {
             ) {
 
                 x.altitudeM =
-
                         a.optDouble(
                                 "alt_geom"
                         )
-
                                 * 0.3048;
             }
-
 
             if (
                     a.opt("gs")
@@ -1085,14 +767,11 @@ public class MainActivity extends Activity {
             ) {
 
                 x.speedKmh =
-
                         a.optDouble(
                                 "gs"
                         )
-
                                 * 1.852;
             }
-
 
             if (
                     a.opt("track")
@@ -1105,11 +784,9 @@ public class MainActivity extends Activity {
                         );
             }
 
-
             return x;
         }
     }
-
 
     static final class RouteInfo {
 
@@ -1122,7 +799,6 @@ public class MainActivity extends Activity {
         String destinationCode;
         String destinationCity;
 
-
         static RouteInfo fromJson(
                 JSONObject f
         ) {
@@ -1130,23 +806,18 @@ public class MainActivity extends Activity {
             RouteInfo r =
                     new RouteInfo();
 
-
             r.publicFlight =
                     str(
                             f,
                             "callsign_iata"
                     );
 
-
             JSONObject airline =
                     f.optJSONObject(
                             "airline"
                     );
 
-
-            if (
-                    airline != null
-            ) {
+            if (airline != null) {
 
                 r.airline =
                         str(
@@ -1155,81 +826,63 @@ public class MainActivity extends Activity {
                         );
             }
 
-
             JSONObject origin =
                     f.optJSONObject(
                             "origin"
                     );
 
-
-            if (
-                    origin != null
-            ) {
+            if (origin != null) {
 
                 r.originCode =
                         first(
-
                                 str(
                                         origin,
                                         "iata_code"
                                 ),
-
                                 str(
                                         origin,
                                         "icao_code"
                                 )
                         );
 
-
                 r.originCity =
                         first(
-
                                 str(
                                         origin,
                                         "municipality"
                                 ),
-
                                 str(
                                         origin,
                                         "name"
                                 )
                         );
             }
-
 
             JSONObject destination =
                     f.optJSONObject(
                             "destination"
                     );
 
-
-            if (
-                    destination != null
-            ) {
+            if (destination != null) {
 
                 r.destinationCode =
                         first(
-
                                 str(
                                         destination,
                                         "iata_code"
                                 ),
-
                                 str(
                                         destination,
                                         "icao_code"
                                 )
                         );
 
-
                 r.destinationCity =
                         first(
-
                                 str(
                                         destination,
                                         "municipality"
                                 ),
-
                                 str(
                                         destination,
                                         "name"
@@ -1237,52 +890,41 @@ public class MainActivity extends Activity {
                         );
             }
 
-
             return r;
         }
-
 
         static String first(
                 String a,
                 String b
         ) {
 
-            return
-                    a != null &&
-                    !a.isEmpty()
-
-                            ? a
-                            : b;
+            return a != null
+                    && !a.isEmpty()
+                    ? a
+                    : b;
         }
     }
 
-
     static final class FlightWallView
             extends View {
-
 
         private final Paint p =
                 new Paint(
                         Paint.ANTI_ALIAS_FLAG
                 );
 
-
         private final Paint stroke =
                 new Paint(
                         Paint.ANTI_ALIAS_FLAG
                 );
 
-
         private final GestureDetector gestures;
-
 
         private AircraftInfo aircraft;
         private RouteInfo route;
 
-
         private Runnable onLongPress;
         private Runnable onTap;
-
 
         private final int bg =
                 Color.rgb(
@@ -1291,14 +933,12 @@ public class MainActivity extends Activity {
                         31
                 );
 
-
         private final int panel =
                 Color.rgb(
                         15,
                         31,
                         51
                 );
-
 
         private final int line =
                 Color.rgb(
@@ -1307,14 +947,12 @@ public class MainActivity extends Activity {
                         87
                 );
 
-
         private final int text =
                 Color.rgb(
                         245,
                         248,
                         252
                 );
-
 
         private final int muted =
                 Color.rgb(
@@ -1323,14 +961,12 @@ public class MainActivity extends Activity {
                         200
                 );
 
-
         private final int accent =
                 Color.rgb(
                         125,
                         211,
                         252
                 );
-
 
         private final int accent2 =
                 Color.rgb(
@@ -1339,70 +975,51 @@ public class MainActivity extends Activity {
                         253
                 );
 
-
-        FlightWallView(
-                Context context
-        ) {
+        FlightWallView(Context context) {
 
             super(context);
 
-
-            setBackgroundColor(
-                    bg
-            );
-
+            setBackgroundColor(bg);
 
             stroke.setStyle(
                     Paint.Style.STROKE
             );
 
-
             stroke.setStrokeWidth(
                     dp(1)
             );
 
-
             gestures =
                     new GestureDetector(
-
                             context,
-
                             new GestureDetector
                                     .SimpleOnGestureListener() {
-
 
                                 @Override
                                 public boolean onDown(
                                         MotionEvent e
                                 ) {
-
                                     return true;
                                 }
-
 
                                 @Override
                                 public boolean onSingleTapConfirmed(
                                         MotionEvent e
                                 ) {
 
-                                    if (
-                                            onTap != null
-                                    ) {
+                                    if (onTap != null) {
                                         onTap.run();
                                     }
 
                                     return true;
                                 }
 
-
                                 @Override
                                 public void onLongPress(
                                         MotionEvent e
                                 ) {
 
-                                    if (
-                                            onLongPress != null
-                                    ) {
+                                    if (onLongPress != null) {
                                         onLongPress.run();
                                     }
                                 }
@@ -1410,82 +1027,53 @@ public class MainActivity extends Activity {
                     );
         }
 
-
         void setOnLongPressListener(
                 Runnable r
         ) {
-
-            onLongPress =
-                    r;
+            onLongPress = r;
         }
-
 
         void setOnTapListener(
                 Runnable r
         ) {
-
-            onTap =
-                    r;
+            onTap = r;
         }
-
 
         void setFlight(
                 AircraftInfo a,
                 RouteInfo r
         ) {
 
-            aircraft =
-                    a;
-
-            route =
-                    r;
+            aircraft = a;
+            route = r;
 
             invalidate();
         }
-
 
         @Override
         public boolean onTouchEvent(
                 MotionEvent event
         ) {
 
-            return gestures
-                    .onTouchEvent(
-                            event
-                    );
+            return gestures.onTouchEvent(
+                    event
+            );
         }
 
-
         @Override
-        protected void onDraw(
-                Canvas c
-        ) {
+        protected void onDraw(Canvas c) {
 
             super.onDraw(c);
 
-
-            if (
-                    aircraft == null
-            ) {
-
+            if (aircraft == null) {
                 return;
             }
 
-
-            float w =
-                    getWidth();
-
-
-            float h =
-                    getHeight();
-
+            float w = getWidth();
+            float h = getHeight();
 
             float shortSide =
-                    Math.min(
-                            w,
-                            h
-                    );
-
+                    Math.min(w, h);
 
             float margin =
                     clamp(
@@ -1494,26 +1082,16 @@ public class MainActivity extends Activity {
                             dp(34)
                     );
 
-
             RectF card =
                     new RectF(
-
                             margin,
                             margin,
                             w - margin,
                             h - margin
                     );
 
-
-            p.setColor(
-                    panel
-            );
-
-
-            p.setStyle(
-                    Paint.Style.FILL
-            );
-
+            p.setColor(panel);
+            p.setStyle(Paint.Style.FILL);
 
             c.drawRoundRect(
                     card,
@@ -1522,11 +1100,7 @@ public class MainActivity extends Activity {
                     p
             );
 
-
-            stroke.setColor(
-                    line
-            );
-
+            stroke.setColor(line);
 
             c.drawRoundRect(
                     card,
@@ -1535,7 +1109,6 @@ public class MainActivity extends Activity {
                     stroke
             );
 
-
             float inner =
                     clamp(
                             shortSide * 0.05f,
@@ -1543,142 +1116,88 @@ public class MainActivity extends Activity {
                             dp(38)
                     );
 
-
             float left =
                     card.left + inner;
-
 
             float right =
                     card.right - inner;
 
-
             float top =
                     card.top + inner;
-
 
             boolean portrait =
                     h > w;
 
-
             float callsignSize =
-
                     portrait
-
-                            ?
-
-                            clamp(
+                            ? clamp(
                                     w * 0.13f,
                                     dp(34),
                                     dp(76)
                             )
-
-                            :
-
-                            clamp(
+                            : clamp(
                                     h * 0.18f,
                                     dp(42),
                                     dp(104)
                             );
 
-
             p.setTypeface(
-                    android.graphics
-                            .Typeface
-                            .DEFAULT_BOLD
+                    android.graphics.Typeface.DEFAULT_BOLD
             );
-
 
             p.setTextSize(
                     callsignSize
             );
 
-
-            p.setColor(
-                    text
-            );
-
-
-            p.setStyle(
-                    Paint.Style.FILL
-            );
-
+            p.setColor(text);
+            p.setStyle(Paint.Style.FILL);
 
             String displayFlight =
-
-                    route != null &&
-                    notEmpty(
-                            route.publicFlight
-                    )
-
-                            ?
-
-                            route.publicFlight
-
-                            :
-
-                            aircraft.callsign;
-
+                    route != null
+                            && notEmpty(
+                                    route.publicFlight
+                            )
+                            ? route.publicFlight
+                            : aircraft.callsign;
 
             c.drawText(
-
                     displayFlight == null
                             ? ""
                             : displayFlight,
-
                     left,
-
-                    top +
-                            callsignSize *
-                                    0.82f,
-
+                    top
+                            + callsignSize
+                            * 0.82f,
                     p
             );
 
-
             float airlineSize =
-                    callsignSize *
-                            0.26f;
+                    callsignSize
+                            * 0.26f;
 
-
-            if (
-                    route != null &&
-                    notEmpty(
-                            route.airline
-                    )
-            ) {
+            if (route != null
+                    && notEmpty(route.airline)) {
 
                 p.setTypeface(
-                        android.graphics
-                                .Typeface
-                                .DEFAULT
+                        android.graphics.Typeface.DEFAULT
                 );
-
 
                 p.setTextSize(
                         airlineSize
                 );
 
-
-                p.setColor(
-                        accent
-                );
-
+                p.setColor(accent);
 
                 c.drawText(
-
                         route.airline,
-
                         left,
-
-                        top +
-                                callsignSize +
-                                airlineSize *
-                                        0.9f,
-
+                        top
+                                + callsignSize
+                                + airlineSize
+                                * 0.9f,
                         p
                 );
             }
-
 
             float planeSize =
                     clamp(
@@ -1687,110 +1206,75 @@ public class MainActivity extends Activity {
                             dp(150)
                     );
 
-
             float planeCx =
-                    right -
-                            planeSize *
-                                    0.55f;
-
+                    right
+                            - planeSize
+                            * 0.55f;
 
             float planeCy =
-                    top +
-                            planeSize *
-                                    0.58f;
-
+                    top
+                            + planeSize
+                            * 0.58f;
 
             drawPlane(
-
                     c,
                     planeCx,
                     planeCy,
                     planeSize,
-
                     aircraft.track == null
-
                             ? 0
-
-                            : aircraft
-                                    .track
-                                    .floatValue()
+                            : aircraft.track.floatValue()
             );
 
-
             float y =
-                    top +
-                            callsignSize +
-                            airlineSize +
-                            dp(22);
-
+                    top
+                            + callsignSize
+                            + airlineSize
+                            + dp(22);
 
             boolean hasRoute =
+                    route != null
+                            && notEmpty(
+                                    route.originCode
+                            )
+                            && notEmpty(
+                                    route.destinationCode
+                            );
 
-                    route != null &&
+            if (hasRoute) {
 
-                    notEmpty(
-                            route.originCode
-                    ) &&
-
-                    notEmpty(
-                            route.destinationCode
-                    );
-
-
-            if (
-                    hasRoute
-            ) {
-
-                y =
-                        drawRoute(
-                                c,
-                                left,
-                                right,
-                                y,
-                                portrait
-                        );
+                y = drawRoute(
+                        c,
+                        left,
+                        right,
+                        y,
+                        portrait
+                );
             }
 
-
             /*
-             * EGET UTRYMME FÖR DATATEXTEN
-             *
-             * Allt ovanför footerTop används av
-             * informationsrutorna.
-             *
-             * Allt under footerTop är reserverat
+             * Ett litet eget område reserveras längst ned
              * för källtexten.
              */
 
             float sourceFooterHeight =
-
                     portrait
                             ? dp(30)
-                            : dp(26);
-
+                            : dp(28);
 
             float footerTop =
-
                     card.bottom
                             - inner
                             - sourceFooterHeight;
 
-
             float metricsTop =
                     y + dp(8);
 
-
             float availableForMetrics =
-
-                    Math.max(
-                            0,
-                            footerTop -
-                                    metricsTop
-                    );
-
+                    footerTop
+                            - metricsTop;
 
             drawMetrics(
-
                     c,
                     left,
                     right,
@@ -1799,68 +1283,42 @@ public class MainActivity extends Activity {
                     portrait
             );
 
-
             /*
-             * DATATEXT
-             *
-             * Den ritas centrerad i den reserverade
-             * ytan under samtliga fyra rutor.
+             * Källtext under alla informationsrutor.
              */
 
             p.setTypeface(
-                    android.graphics
-                            .Typeface
-                            .DEFAULT
+                    android.graphics.Typeface.DEFAULT
             );
 
-
             p.setTextSize(
-
                     clamp(
-                            shortSide *
-                                    0.016f,
+                            shortSide
+                                    * 0.016f,
                             dp(8),
                             dp(11)
                     )
             );
 
-
-            p.setColor(
-                    muted
-            );
-
+            p.setColor(muted);
 
             p.setTextAlign(
                     Paint.Align.CENTER
             );
 
-
-            float sourceBaseline =
-
-                    footerTop
-                            +
-                            sourceFooterHeight *
-                                    0.72f;
-
-
             c.drawText(
-
                     "Data: adsb.fi · Route: ADSBDB",
-
-                    (left + right) /
-                            2f,
-
-                    sourceBaseline,
-
+                    (left + right) / 2f,
+                    card.bottom
+                            - inner
+                            - dp(5),
                     p
             );
-
 
             p.setTextAlign(
                     Paint.Align.LEFT
             );
         }
-
 
         private float drawRoute(
                 Canvas c,
@@ -1871,16 +1329,11 @@ public class MainActivity extends Activity {
         ) {
 
             float height =
-
                     portrait
                             ? dp(100)
                             : dp(118);
 
-
-            stroke.setColor(
-                    line
-            );
-
+            stroke.setColor(line);
 
             c.drawLine(
                     left,
@@ -1890,7 +1343,6 @@ public class MainActivity extends Activity {
                     stroke
             );
 
-
             c.drawLine(
                     left,
                     y + height,
@@ -1898,176 +1350,124 @@ public class MainActivity extends Activity {
                     y + height,
                     stroke
             );
-
 
             float cx1 =
-
-                    left +
-                    (right - left) *
-                            0.25f;
-
+                    left
+                            + (right - left)
+                            * 0.25f;
 
             float cx2 =
-
-                    left +
-                    (right - left) *
-                            0.75f;
-
+                    left
+                            + (right - left)
+                            * 0.75f;
 
             float codeSize =
-
                     portrait
-
-                            ?
-
-                            clamp(
-                                    getWidth() *
-                                            0.085f,
+                            ? clamp(
+                                    getWidth()
+                                            * 0.085f,
                                     dp(28),
                                     dp(52)
                             )
-
-                            :
-
-                            clamp(
-                                    getHeight() *
-                                            0.12f,
+                            : clamp(
+                                    getHeight()
+                                            * 0.12f,
                                     dp(30),
                                     dp(66)
                             );
 
-
             p.setTypeface(
-                    android.graphics
-                            .Typeface
-                            .DEFAULT_BOLD
+                    android.graphics.Typeface.DEFAULT_BOLD
             );
-
 
             p.setTextSize(
                     codeSize
             );
 
-
-            p.setColor(
-                    text
-            );
-
+            p.setColor(text);
 
             drawCentered(
-
                     c,
                     route.originCode,
                     cx1,
-                    y +
-                            height *
-                                    0.47f,
+                    y
+                            + height
+                            * 0.47f,
                     p
             );
 
-
             drawCentered(
-
                     c,
                     route.destinationCode,
                     cx2,
-                    y +
-                            height *
-                                    0.47f,
+                    y
+                            + height
+                            * 0.47f,
                     p
             );
 
-
             p.setTypeface(
-                    android.graphics
-                            .Typeface
-                            .DEFAULT
+                    android.graphics.Typeface.DEFAULT
             );
 
-
             p.setTextSize(
-
                     clamp(
-                            codeSize *
-                                    0.24f,
+                            codeSize
+                                    * 0.24f,
                             dp(10),
                             dp(15)
                     )
             );
 
-
-            p.setColor(
-                    muted
-            );
-
+            p.setColor(muted);
 
             drawCentered(
-
                     c,
-
                     ellipsize(
                             route.originCity,
                             22
                     ),
-
                     cx1,
-
-                    y +
-                            height *
-                                    0.72f,
-
+                    y
+                            + height
+                            * 0.72f,
                     p
             );
 
-
             drawCentered(
-
                     c,
-
                     ellipsize(
                             route.destinationCity,
                             22
                     ),
-
                     cx2,
-
-                    y +
-                            height *
-                                    0.72f,
-
+                    y
+                            + height
+                            * 0.72f,
                     p
             );
-
 
             p.setTextSize(
-                    codeSize *
-                            0.62f
+                    codeSize
+                            * 0.62f
             );
 
-
-            p.setColor(
-                    accent2
-            );
-
+            p.setColor(accent2);
 
             drawCentered(
-
                     c,
                     "▶",
-                    (left + right) /
-                            2f,
-                    y +
-                            height *
-                                    0.51f,
+                    (left + right) / 2f,
+                    y
+                            + height
+                            * 0.51f,
                     p
             );
 
-
-            return y +
-                    height +
-                    dp(12);
+            return y
+                    + height
+                    + dp(12);
         }
-
 
         private void drawMetrics(
                 Canvas c,
@@ -2085,26 +1485,16 @@ public class MainActivity extends Activity {
                     "KURS"
             };
 
-
             String[] values = {
 
                     String.format(
-                                    new Locale(
-                                            "sv",
-                                            "SE"
-                                    ),
-                                    "%.1f KM",
-                                    aircraft.distanceKm
-                            )
-                            .replace(
-                                    '.',
-                                    ','
-                            ),
+                            new Locale("sv", "SE"),
+                            "%.1f KM",
+                            aircraft.distanceKm
+                    ).replace('.', ','),
 
                     aircraft.altitudeM == null
-
                             ? "-"
-
                             : String.format(
                                     Locale.US,
                                     "%.0f M",
@@ -2112,9 +1502,7 @@ public class MainActivity extends Activity {
                             ),
 
                     aircraft.speedKmh == null
-
                             ? "-"
-
                             : String.format(
                                     Locale.US,
                                     "%.0f KM/H",
@@ -2122,137 +1510,99 @@ public class MainActivity extends Activity {
                             ),
 
                     aircraft.track == null
-
                             ? "-"
-
                             : direction(
                                     aircraft.track
                             )
-                            +
-                            " "
-                            +
-                            Math.round(
+                            + " "
+                            + Math.round(
                                     aircraft.track
                             )
-                            +
-                            "°"
+                            + "°"
             };
-
 
             int cols =
                     portrait
                             ? 2
                             : 4;
 
-
             int rows =
                     4 / cols;
-
 
             float gap =
                     dp(8);
 
-
             float boxW =
-
                     (
-                            right -
-                            left -
-                            gap *
-                                    (cols - 1)
+                            right
+                                    - left
+                                    - gap
+                                    * (cols - 1)
                     )
-
-                    / cols;
-
+                            / cols;
 
             /*
-             * Viktig ändring:
+             * Rutorna görs bara lite lägre.
              *
-             * rutornas höjd får ALDRIG bli större
-             * än det verkliga utrymmet som finns.
-             *
-             * Därför kan de inte längre gå ner
-             * över datatexten.
+             * Viktigt: textplaceringen nedan är fast,
+             * så rubriken och värdet går inte ovanpå
+             * varandra när rutan blir lite lägre.
              */
 
-            float maximumAvailableBoxHeight =
-
-                    (
-                            availableHeight -
-                            gap *
-                                    (rows - 1)
-                    )
-
-                    / rows;
-
-
-            maximumAvailableBoxHeight =
-
-                    Math.max(
-                            dp(1),
-                            maximumAvailableBoxHeight
-                    );
-
-
             float preferredBoxHeight =
-
                     portrait
-                            ? dp(88)
-                            : dp(66);
+                            ? dp(78)
+                            : dp(58);
 
+            float maximumBoxHeight =
+                    (
+                            availableHeight
+                                    - gap
+                                    * (rows - 1)
+                    )
+                            / rows;
 
             float boxH =
-
                     Math.min(
                             preferredBoxHeight,
-                            maximumAvailableBoxHeight
+                            maximumBoxHeight
                     );
 
+            /*
+             * Låt inte rutan bli extremt låg.
+             */
 
-            for (
-                    int i = 0;
-                    i < 4;
-                    i++
-            ) {
+            boxH =
+                    Math.max(
+                            boxH,
+                            dp(50)
+                    );
+
+            for (int i = 0; i < 4; i++) {
 
                 int row =
                         i / cols;
 
-
                 int col =
                         i % cols;
 
-
                 float x =
-
-                        left +
-                        col *
-                                (
-                                        boxW +
-                                        gap
-                                );
-
+                        left
+                                + col
+                                * (boxW + gap);
 
                 float yy =
-
-                        y +
-                        row *
-                                (
-                                        boxH +
-                                        gap
-                                );
-
+                        y
+                                + row
+                                * (boxH + gap);
 
                 RectF r =
                         new RectF(
-
                                 x,
                                 yy,
-
                                 x + boxW,
                                 yy + boxH
                         );
-
 
                 p.setColor(
                         Color.rgb(
@@ -2262,7 +1612,6 @@ public class MainActivity extends Activity {
                         )
                 );
 
-
                 c.drawRoundRect(
                         r,
                         dp(16),
@@ -2270,11 +1619,7 @@ public class MainActivity extends Activity {
                         p
                 );
 
-
-                stroke.setColor(
-                        line
-                );
-
+                stroke.setColor(line);
 
                 c.drawRoundRect(
                         r,
@@ -2283,139 +1628,67 @@ public class MainActivity extends Activity {
                         stroke
                 );
 
-
-                p.setTypeface(
-                        android.graphics
-                                .Typeface
-                                .DEFAULT
-                );
-
-
-                float cardPad =
-
-                        portrait
-                                ? dp(11)
-                                : dp(9);
-
-
                 /*
-                 * Textstorleken anpassas även lite
-                 * om rutorna måste bli lägre.
+                 * Rubrik.
                  */
 
-                float labelSize =
-
-                        clamp(
-                                boxW *
-                                        0.052f,
-                                dp(8),
-                                dp(10)
-                        );
-
-
-                if (
-                        boxH < dp(54)
-                ) {
-
-                    labelSize =
-                            Math.min(
-                                    labelSize,
-                                    dp(8)
-                            );
-                }
-
+                p.setTypeface(
+                        android.graphics.Typeface.DEFAULT
+                );
 
                 p.setTextSize(
-                        labelSize
+                        portrait
+                                ? dp(10)
+                                : dp(9)
                 );
 
+                p.setColor(muted);
 
-                p.setColor(
-                        muted
-                );
-
+                float textX =
+                        x + dp(10);
 
                 float labelY =
-
-                        yy +
-                        Math.min(
-                                portrait
-                                        ? dp(19)
-                                        : dp(16),
-
-                                boxH *
-                                        0.34f
-                        );
-
+                        yy + dp(18);
 
                 c.drawText(
-
                         labels[i],
-
-                        x + cardPad,
-
+                        textX,
                         labelY,
-
                         p
                 );
 
+                /*
+                 * Värde.
+                 *
+                 * Värdet placeras nära nederkanten
+                 * i stället för relativt mot rubriken.
+                 */
 
                 p.setTypeface(
-                        android.graphics
-                                .Typeface
-                                .DEFAULT_BOLD
+                        android.graphics.Typeface.DEFAULT_BOLD
                 );
-
-
-                float valueSize =
-
-                        clamp(
-                                boxW *
-                                        0.105f,
-                                dp(13),
-                                portrait
-                                        ? dp(28)
-                                        : dp(25)
-                        );
-
-
-                if (
-                        boxH < dp(54)
-                ) {
-
-                    valueSize =
-                            Math.min(
-                                    valueSize,
-                                    dp(18)
-                            );
-                }
-
 
                 p.setTextSize(
-                        valueSize
+                        portrait
+                                ? dp(24)
+                                : dp(21)
                 );
 
+                p.setColor(text);
 
-                p.setColor(
-                        text
-                );
-
+                float valueY =
+                        yy
+                                + boxH
+                                - dp(10);
 
                 c.drawText(
-
                         values[i],
-
-                        x + cardPad,
-
-                        yy +
-                                boxH *
-                                        0.75f,
-
+                        textX,
+                        valueY,
                         p
                 );
             }
         }
-
 
         private void drawPlane(
                 Canvas c,
@@ -2427,147 +1700,115 @@ public class MainActivity extends Activity {
 
             c.save();
 
-
             c.rotate(
                     heading,
                     cx,
                     cy
             );
 
-
             float s =
-                    size /
-                            32f;
-
+                    size / 32f;
 
             Path path =
                     new Path();
-
 
             path.moveTo(
                     cx + (15 - 16) * s,
                     cy + (1 - 16) * s
             );
 
-
             path.lineTo(
                     cx + (17 - 16) * s,
                     cy + (1 - 16) * s
             );
-
 
             path.lineTo(
                     cx + (19 - 16) * s,
                     cy + (12 - 16) * s
             );
 
-
             path.lineTo(
                     cx + (29 - 16) * s,
                     cy + (16 - 16) * s
             );
-
 
             path.lineTo(
                     cx + (29 - 16) * s,
                     cy + (19 - 16) * s
             );
 
-
             path.lineTo(
                     cx + (19 - 16) * s,
                     cy + (17 - 16) * s
             );
-
 
             path.lineTo(
                     cx + (18 - 16) * s,
                     cy + (25 - 16) * s
             );
 
-
             path.lineTo(
                     cx + (22 - 16) * s,
                     cy + (28 - 16) * s
             );
 
-
             path.lineTo(
                     cx + (22 - 16) * s,
                     cy + (30 - 16) * s
             );
-
 
             path.lineTo(
                     cx,
                     cy + (28 - 16) * s
             );
 
-
             path.lineTo(
                     cx + (10 - 16) * s,
                     cy + (30 - 16) * s
             );
-
 
             path.lineTo(
                     cx + (10 - 16) * s,
                     cy + (28 - 16) * s
             );
 
-
             path.lineTo(
                     cx + (14 - 16) * s,
                     cy + (25 - 16) * s
             );
-
 
             path.lineTo(
                     cx + (13 - 16) * s,
                     cy + (17 - 16) * s
             );
 
-
             path.lineTo(
                     cx + (3 - 16) * s,
                     cy + (19 - 16) * s
             );
-
 
             path.lineTo(
                     cx + (3 - 16) * s,
                     cy + (16 - 16) * s
             );
 
-
             path.lineTo(
                     cx + (13 - 16) * s,
                     cy + (12 - 16) * s
             );
 
-
             path.close();
 
-
-            p.setColor(
-                    accent
-            );
-
-
-            p.setStyle(
-                    Paint.Style.FILL
-            );
-
+            p.setColor(accent);
+            p.setStyle(Paint.Style.FILL);
 
             c.drawPath(
                     path,
                     p
             );
 
-
             c.restore();
         }
-
 
         private static void drawCentered(
                 Canvas c,
@@ -2577,28 +1818,19 @@ public class MainActivity extends Activity {
                 Paint p
         ) {
 
-            if (
-                    s == null
-            ) {
-
+            if (s == null) {
                 s = "";
             }
 
-
             c.drawText(
-
                     s,
-
-                    cx -
-                            p.measureText(s) /
-                                    2f,
-
+                    cx
+                            - p.measureText(s)
+                            / 2f,
                     baseline,
-
                     p
             );
         }
-
 
         private static String direction(
                 double d
@@ -2615,70 +1847,50 @@ public class MainActivity extends Activity {
                     "NV"
             };
 
-
             int i =
-
                     (int) Math.round(
-
                             (
                                     (
-                                            (
-                                                    d % 360
-                                            )
-                                            + 360
+                                            (d % 360)
+                                                    + 360
                                     )
-                                    % 360
+                                            % 360
                             )
-
-                            / 45.0
+                                    / 45.0
                     )
-
-                    % 8;
-
+                            % 8;
 
             return dirs[i];
         }
-
 
         private static String ellipsize(
                 String s,
                 int max
         ) {
 
-            if (
-                    s == null
-            ) {
-
+            if (s == null) {
                 return "";
             }
 
-
-            return
-                    s.length() <= max
-
-                            ? s
-
-                            : s.substring(
+            return s.length() <= max
+                    ? s
+                    : s.substring(
+                            0,
+                            Math.max(
                                     0,
-                                    Math.max(
-                                            0,
-                                            max - 1
-                                    )
+                                    max - 1
                             )
-                            +
-                            "…";
+                    )
+                    + "…";
         }
-
 
         private static boolean notEmpty(
                 String s
         ) {
 
-            return
-                    s != null &&
-                    !s.trim().isEmpty();
+            return s != null
+                    && !s.trim().isEmpty();
         }
-
 
         private static float clamp(
                 float v,
@@ -2695,16 +1907,11 @@ public class MainActivity extends Activity {
             );
         }
 
-
-        private int dp(
-                int value
-        ) {
+        private int dp(int value) {
 
             return Math.round(
-
-                    value *
-
-                    getResources()
+                    value
+                            * getResources()
                             .getDisplayMetrics()
                             .density
             );
