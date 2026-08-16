@@ -479,10 +479,13 @@ public class MainActivity extends Activity {
 
             int cols = portrait ? 2 : 4;
             int rows = 4 / cols;
-            float gap = dp(10);
+            // Keep the four secondary metric cards compact so flight number and route
+            // remain the visual focus, especially in landscape mode.
+            float gap = portrait ? dp(8) : dp(8);
             float boxW = (right - left - gap * (cols - 1)) / cols;
-            float boxH = Math.min(portrait ? dp(105) : dp(100), (availableHeight - gap * (rows - 1)) / rows);
-            boxH = Math.max(dp(72), boxH);
+            float targetBoxH = portrait ? dp(88) : dp(66);
+            float boxH = Math.min(targetBoxH, (availableHeight - gap * (rows - 1)) / rows);
+            boxH = Math.max(portrait ? dp(64) : dp(54), boxH);
 
             for (int i = 0; i < 4; i++) {
                 int row = i / cols;
@@ -496,14 +499,16 @@ public class MainActivity extends Activity {
                 c.drawRoundRect(r, dp(16), dp(16), stroke);
 
                 p.setTypeface(android.graphics.Typeface.DEFAULT);
-                p.setTextSize(clamp(boxW * 0.065f, dp(9), dp(12)));
+                float cardPad = portrait ? dp(11) : dp(9);
+
+                p.setTextSize(clamp(boxW * 0.052f, dp(8), dp(10)));
                 p.setColor(muted);
-                c.drawText(labels[i], x + dp(13), yy + dp(22), p);
+                c.drawText(labels[i], x + cardPad, yy + (portrait ? dp(19) : dp(16)), p);
 
                 p.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-                p.setTextSize(clamp(boxW * 0.13f, dp(17), dp(32)));
+                p.setTextSize(clamp(boxW * 0.105f, dp(15), portrait ? dp(28) : dp(25)));
                 p.setColor(text);
-                c.drawText(values[i], x + dp(13), yy + boxH * 0.70f, p);
+                c.drawText(values[i], x + cardPad, yy + boxH * 0.72f, p);
             }
         }
 
