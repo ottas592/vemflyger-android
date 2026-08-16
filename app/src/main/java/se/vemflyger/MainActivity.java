@@ -63,19 +63,33 @@ public class MainActivity extends Activity {
                 @Override
                 public void run() {
                     refreshAircraft();
-                    handler.postDelayed(this, REFRESH_MS);
+                    handler.postDelayed(
+                            this,
+                            REFRESH_MS
+                    );
                 }
             };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
 
-        prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        prefs =
+                getSharedPreferences(
+                        PREFS,
+                        MODE_PRIVATE
+                );
 
         configureWindow();
 
-        wallView = new FlightWallView(this);
+        wallView =
+                new FlightWallView(this);
+
+        /*
+         * Extra skydd mot vanlig Android-skärmtimeout.
+         */
+        wallView.setKeepScreenOn(true);
 
         wallView.setOnLongPressListener(
                 this::showSettings
@@ -90,72 +104,119 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onResume() {
+
         super.onResume();
 
-        handler.removeCallbacks(refreshRunnable);
-        handler.post(refreshRunnable);
+        /*
+         * Återaktivera keep-screen-on varje gång
+         * appen kommer tillbaka till förgrunden.
+         */
+        getWindow().addFlags(
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+        );
+
+        if (wallView != null) {
+            wallView.setKeepScreenOn(true);
+        }
+
+        handler.removeCallbacks(
+                refreshRunnable
+        );
+
+        handler.post(
+                refreshRunnable
+        );
     }
 
     @Override
     protected void onPause() {
-        handler.removeCallbacks(refreshRunnable);
+
+        handler.removeCallbacks(
+                refreshRunnable
+        );
+
         super.onPause();
     }
 
     @Override
     protected void onDestroy() {
+
         executor.shutdownNow();
+
         super.onDestroy();
     }
 
     private void configureWindow() {
-        Window window = getWindow();
+
+        Window window =
+                getWindow();
 
         window.setStatusBarColor(
-                Color.rgb(7, 17, 31)
+                Color.rgb(
+                        7,
+                        17,
+                        31
+                )
         );
 
         window.setNavigationBarColor(
-                Color.rgb(7, 17, 31)
+                Color.rgb(
+                        7,
+                        17,
+                        31
+                )
         );
 
+        /*
+         * Primärt skydd mot skärmtimeout.
+         */
         window.addFlags(
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
         );
 
-        window.getDecorView().setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                        | View.SYSTEM_UI_FLAG_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-        );
+        window.getDecorView()
+                .setSystemUiVisibility(
+                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                                | View.SYSTEM_UI_FLAG_FULLSCREEN
+                                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                );
     }
 
     private double latitude() {
+
         return Double.longBitsToDouble(
                 prefs.getLong(
                         "lat",
-                        Double.doubleToLongBits(DEFAULT_LAT)
+                        Double.doubleToLongBits(
+                                DEFAULT_LAT
+                        )
                 )
         );
     }
 
     private double longitude() {
+
         return Double.longBitsToDouble(
                 prefs.getLong(
                         "lon",
-                        Double.doubleToLongBits(DEFAULT_LON)
+                        Double.doubleToLongBits(
+                                DEFAULT_LON
+                        )
                 )
         );
     }
 
     private double radiusKm() {
+
         return Double.longBitsToDouble(
                 prefs.getLong(
                         "radius",
-                        Double.doubleToLongBits(DEFAULT_RADIUS_KM)
+                        Double.doubleToLongBits(
+                                DEFAULT_RADIUS_KM
+                        )
                 )
         );
     }
@@ -168,48 +229,69 @@ public class MainActivity extends Activity {
 
         requestRunning = true;
 
-        final double lat = latitude();
-        final double lon = longitude();
-        final double radius = radiusKm();
+        final double lat =
+                latitude();
+
+        final double lon =
+                longitude();
+
+        final double radius =
+                radiusKm();
 
         executor.execute(() -> {
 
             try {
 
-                int nm = Math.max(
-                        3,
-                        (int) Math.ceil(radius / 1.852)
-                );
+                int nm =
+                        Math.max(
+                                3,
+                                (int) Math.ceil(
+                                        radius / 1.852
+                                )
+                        );
 
-                String url = String.format(
-                        Locale.US,
-                        "https://opendata.adsb.fi/api/v3/lat/%.6f/lon/%.6f/dist/%d",
-                        lat,
-                        lon,
-                        nm
-                );
+                String url =
+                        String.format(
+                                Locale.US,
+                                "https://opendata.adsb.fi/api/v3/lat/%.6f/lon/%.6f/dist/%d",
+                                lat,
+                                lon,
+                                nm
+                        );
 
-                JSONObject root = getJson(url);
+                JSONObject root =
+                        getJson(url);
 
                 JSONArray aircraft =
                         root.optJSONArray("ac");
 
                 if (aircraft == null) {
-                    aircraft = root.optJSONArray("aircraft");
+
+                    aircraft =
+                            root.optJSONArray(
+                                    "aircraft"
+                            );
                 }
 
-                AircraftInfo nearest = null;
+                AircraftInfo nearest =
+                        null;
 
                 if (aircraft != null) {
 
-                    for (int i = 0; i < aircraft.length(); i++) {
+                    for (
+                            int i = 0;
+                            i < aircraft.length();
+                            i++
+                    ) {
 
                         JSONObject a =
                                 aircraft.optJSONObject(i);
 
-                        if (a == null
-                                || !a.has("lat")
-                                || !a.has("lon")) {
+                        if (
+                                a == null
+                                        || !a.has("lat")
+                                        || !a.has("lon")
+                        ) {
                             continue;
                         }
 
@@ -225,8 +307,10 @@ public class MainActivity extends Activity {
                                         Double.NaN
                                 );
 
-                        if (!Double.isFinite(aLat)
-                                || !Double.isFinite(aLon)) {
+                        if (
+                                !Double.isFinite(aLat)
+                                        || !Double.isFinite(aLon)
+                        ) {
                             continue;
                         }
 
@@ -242,8 +326,11 @@ public class MainActivity extends Activity {
                             continue;
                         }
 
-                        if (nearest == null
-                                || distance < nearest.distanceKm) {
+                        if (
+                                nearest == null
+                                        || distance
+                                        < nearest.distanceKm
+                        ) {
 
                             nearest =
                                     AircraftInfo.fromJson(
@@ -260,43 +347,60 @@ public class MainActivity extends Activity {
                     lastRoute = null;
 
                     runOnUiThread(
-                            () -> wallView.setFlight(
-                                    null,
-                                    null
-                            )
+                            () ->
+                                    wallView.setFlight(
+                                            null,
+                                            null
+                                    )
                     );
 
                 } else {
 
-                    RouteInfo route = null;
+                    RouteInfo route =
+                            null;
 
                     String cs =
                             nearest.callsign;
 
-                    if (cs != null
-                            && !cs.isEmpty()) {
+                    if (
+                            cs != null
+                                    && !cs.isEmpty()
+                    ) {
 
-                        if (cs.equals(lastRouteCallsign)) {
+                        if (
+                                cs.equals(
+                                        lastRouteCallsign
+                                )
+                        ) {
 
-                            route = lastRoute;
+                            route =
+                                    lastRoute;
 
                         } else {
 
-                            route = lookupRoute(cs);
+                            route =
+                                    lookupRoute(cs);
 
-                            lastRouteCallsign = cs;
-                            lastRoute = route;
+                            lastRouteCallsign =
+                                    cs;
+
+                            lastRoute =
+                                    route;
                         }
                     }
 
-                    final AircraftInfo shown = nearest;
-                    final RouteInfo shownRoute = route;
+                    final AircraftInfo shown =
+                            nearest;
+
+                    final RouteInfo shownRoute =
+                            route;
 
                     runOnUiThread(
-                            () -> wallView.setFlight(
-                                    shown,
-                                    shownRoute
-                            )
+                            () ->
+                                    wallView.setFlight(
+                                            shown,
+                                            shownRoute
+                                    )
                     );
                 }
 
@@ -306,20 +410,28 @@ public class MainActivity extends Activity {
 
             } finally {
 
-                requestRunning = false;
+                requestRunning =
+                        false;
             }
         });
     }
 
-    private RouteInfo lookupRoute(String callsign) {
+    private RouteInfo lookupRoute(
+            String callsign
+    ) {
 
         try {
 
             String clean =
                     callsign
                             .trim()
-                            .replace(" ", "")
-                            .toUpperCase(Locale.US);
+                            .replace(
+                                    " ",
+                                    ""
+                            )
+                            .toUpperCase(
+                                    Locale.US
+                            );
 
             if (clean.isEmpty()) {
                 return null;
@@ -332,14 +444,18 @@ public class MainActivity extends Activity {
                     );
 
             JSONObject response =
-                    root.optJSONObject("response");
+                    root.optJSONObject(
+                            "response"
+                    );
 
             if (response == null) {
                 return null;
             }
 
             JSONObject f =
-                    response.optJSONObject("flightroute");
+                    response.optJSONObject(
+                            "flightroute"
+                    );
 
             if (f == null) {
                 return null;
@@ -353,17 +469,26 @@ public class MainActivity extends Activity {
         }
     }
 
-    private JSONObject getJson(String address)
-            throws Exception {
+    private JSONObject getJson(
+            String address
+    ) throws Exception {
 
         HttpURLConnection conn =
                 (HttpURLConnection)
                         new URL(address)
                                 .openConnection();
 
-        conn.setRequestMethod("GET");
-        conn.setConnectTimeout(8_000);
-        conn.setReadTimeout(8_000);
+        conn.setRequestMethod(
+                "GET"
+        );
+
+        conn.setConnectTimeout(
+                8_000
+        );
+
+        conn.setReadTimeout(
+                8_000
+        );
 
         conn.setRequestProperty(
                 "Accept",
@@ -379,7 +504,8 @@ public class MainActivity extends Activity {
                 conn.getResponseCode();
 
         InputStream stream =
-                code >= 200 && code < 300
+                code >= 200
+                        && code < 300
                         ? conn.getInputStream()
                         : conn.getErrorStream();
 
@@ -400,7 +526,11 @@ public class MainActivity extends Activity {
 
                 String line;
 
-                while ((line = reader.readLine()) != null) {
+                while (
+                        (line = reader.readLine())
+                                != null
+                ) {
+
                     sb.append(line);
                 }
             }
@@ -408,7 +538,10 @@ public class MainActivity extends Activity {
 
         conn.disconnect();
 
-        if (code < 200 || code >= 300) {
+        if (
+                code < 200
+                        || code >= 300
+        ) {
 
             throw new Exception(
                     "HTTP "
@@ -418,7 +551,9 @@ public class MainActivity extends Activity {
             );
         }
 
-        return new JSONObject(sb.toString());
+        return new JSONObject(
+                sb.toString()
+        );
     }
 
     private void showSettings() {
@@ -430,7 +565,8 @@ public class MainActivity extends Activity {
                 LinearLayout.VERTICAL
         );
 
-        int pad = dp(22);
+        int pad =
+                dp(22);
 
         layout.setPadding(
                 pad,
@@ -462,9 +598,12 @@ public class MainActivity extends Activity {
         layout.addView(radius);
 
         AlertDialog dialog =
-                new AlertDialog.Builder(this)
+                new AlertDialog
+                        .Builder(this)
 
-                        .setTitle("Sökposition")
+                        .setTitle(
+                                "Sökposition"
+                        )
 
                         .setView(layout)
 
@@ -485,102 +624,113 @@ public class MainActivity extends Activity {
                         .create();
 
         dialog.setOnShowListener(
-                d -> dialog
-                        .getButton(
-                                AlertDialog.BUTTON_POSITIVE
-                        )
-                        .setOnClickListener(
-                                v -> {
+                d ->
+                        dialog
+                                .getButton(
+                                        AlertDialog.BUTTON_POSITIVE
+                                )
+                                .setOnClickListener(
+                                        v -> {
 
-                                    try {
+                                            try {
 
-                                        double newLat =
-                                                Double.parseDouble(
-                                                        lat.getText()
-                                                                .toString()
-                                                                .replace(
-                                                                        ',',
-                                                                        '.'
+                                                double newLat =
+                                                        Double.parseDouble(
+                                                                lat
+                                                                        .getText()
+                                                                        .toString()
+                                                                        .replace(
+                                                                                ',',
+                                                                                '.'
+                                                                        )
+                                                        );
+
+                                                double newLon =
+                                                        Double.parseDouble(
+                                                                lon
+                                                                        .getText()
+                                                                        .toString()
+                                                                        .replace(
+                                                                                ',',
+                                                                                '.'
+                                                                        )
+                                                        );
+
+                                                double newRadius =
+                                                        Double.parseDouble(
+                                                                radius
+                                                                        .getText()
+                                                                        .toString()
+                                                                        .replace(
+                                                                                ',',
+                                                                                '.'
+                                                                        )
+                                                        );
+
+                                                if (
+                                                        newLat < -90
+                                                                || newLat > 90
+                                                                || newLon < -180
+                                                                || newLon > 180
+                                                                || newRadius <= 0
+                                                                || newRadius > 50
+                                                ) {
+
+                                                    throw new IllegalArgumentException();
+                                                }
+
+                                                prefs.edit()
+
+                                                        .putLong(
+                                                                "lat",
+                                                                Double.doubleToLongBits(
+                                                                        newLat
                                                                 )
+                                                        )
+
+                                                        .putLong(
+                                                                "lon",
+                                                                Double.doubleToLongBits(
+                                                                        newLon
+                                                                )
+                                                        )
+
+                                                        .putLong(
+                                                                "radius",
+                                                                Double.doubleToLongBits(
+                                                                        newRadius
+                                                                )
+                                                        )
+
+                                                        .apply();
+
+                                                lastRouteCallsign =
+                                                        "";
+
+                                                lastRoute =
+                                                        null;
+
+                                                wallView.setFlight(
+                                                        null,
+                                                        null
                                                 );
 
-                                        double newLon =
-                                                Double.parseDouble(
-                                                        lon.getText()
-                                                                .toString()
-                                                                .replace(
-                                                                        ',',
-                                                                        '.'
-                                                                )
-                                                );
+                                                dialog.dismiss();
 
-                                        double newRadius =
-                                                Double.parseDouble(
-                                                        radius.getText()
-                                                                .toString()
-                                                                .replace(
-                                                                        ',',
-                                                                        '.'
-                                                                )
-                                                );
+                                                refreshAircraft();
 
-                                        if (newLat < -90
-                                                || newLat > 90
-                                                || newLon < -180
-                                                || newLon > 180
-                                                || newRadius <= 0
-                                                || newRadius > 50) {
+                                            } catch (Exception ex) {
 
-                                            throw new IllegalArgumentException();
+                                                Toast
+                                                        .makeText(
+                                                                this,
+                                                                "Kontrollera koordinater och radie.",
+                                                                Toast.LENGTH_SHORT
+                                                        )
+                                                        .show();
+                                            }
                                         }
-
-                                        prefs.edit()
-
-                                                .putLong(
-                                                        "lat",
-                                                        Double.doubleToLongBits(
-                                                                newLat
-                                                        )
-                                                )
-
-                                                .putLong(
-                                                        "lon",
-                                                        Double.doubleToLongBits(
-                                                                newLon
-                                                        )
-                                                )
-
-                                                .putLong(
-                                                        "radius",
-                                                        Double.doubleToLongBits(
-                                                                newRadius
-                                                        )
-                                                )
-
-                                                .apply();
-
-                                        lastRouteCallsign = "";
-                                        lastRoute = null;
-
-                                        wallView.setFlight(
-                                                null,
-                                                null
-                                        );
-
-                                        dialog.dismiss();
-
-                                        refreshAircraft();
-
-                                    } catch (Exception ex) {
-
-                                        Toast.makeText(
-                                                this,
-                                                "Kontrollera koordinater och radie.",
-                                                Toast.LENGTH_SHORT
-                                        ).show();
-                                    }
-                                }
-                        )
+                                )
         );
 
         dialog.show();
@@ -594,7 +744,9 @@ public class MainActivity extends Activity {
         EditText edit =
                 new EditText(this);
 
-        edit.setHint(hint);
+        edit.setHint(
+                hint
+        );
 
         edit.setInputType(
                 android.text.InputType.TYPE_CLASS_NUMBER
@@ -630,7 +782,8 @@ public class MainActivity extends Activity {
             double lon2
     ) {
 
-        double r = 6371.0088;
+        double r =
+                6371.0088;
 
         double dLat =
                 Math.toRadians(
@@ -645,21 +798,15 @@ public class MainActivity extends Activity {
         double q =
                 Math.sin(dLat / 2)
                         * Math.sin(dLat / 2)
-
                         +
-
                         Math.cos(
                                 Math.toRadians(lat1)
                         )
-
                                 *
-
                                 Math.cos(
                                         Math.toRadians(lat2)
                                 )
-
                                 *
-
                                 Math.sin(dLon / 2)
                                 * Math.sin(dLon / 2);
 
@@ -740,7 +887,9 @@ public class MainActivity extends Activity {
                     distance;
 
             Object alt =
-                    a.opt("alt_baro");
+                    a.opt(
+                            "alt_baro"
+                    );
 
             if (alt instanceof Number) {
 
@@ -975,11 +1124,19 @@ public class MainActivity extends Activity {
                         253
                 );
 
-        FlightWallView(Context context) {
+        FlightWallView(
+                Context context
+        ) {
 
             super(context);
 
             setBackgroundColor(bg);
+
+            /*
+             * Även själva vyn begär att skärmen
+             * hålls vaken.
+             */
+            setKeepScreenOn(true);
 
             stroke.setStyle(
                     Paint.Style.STROKE
@@ -1030,13 +1187,17 @@ public class MainActivity extends Activity {
         void setOnLongPressListener(
                 Runnable r
         ) {
-            onLongPress = r;
+
+            onLongPress =
+                    r;
         }
 
         void setOnTapListener(
                 Runnable r
         ) {
-            onTap = r;
+
+            onTap =
+                    r;
         }
 
         void setFlight(
@@ -1044,8 +1205,11 @@ public class MainActivity extends Activity {
                 RouteInfo r
         ) {
 
-            aircraft = a;
-            route = r;
+            aircraft =
+                    a;
+
+            route =
+                    r;
 
             invalidate();
         }
@@ -1055,25 +1219,38 @@ public class MainActivity extends Activity {
                 MotionEvent event
         ) {
 
-            return gestures.onTouchEvent(
-                    event
-            );
+            return gestures
+                    .onTouchEvent(
+                            event
+                    );
         }
 
         @Override
-        protected void onDraw(Canvas c) {
+        protected void onDraw(
+                Canvas c
+        ) {
 
             super.onDraw(c);
 
+            /*
+             * Om inget flyg finns inom radien
+             * är skärmen helt tom.
+             */
             if (aircraft == null) {
                 return;
             }
 
-            float w = getWidth();
-            float h = getHeight();
+            float w =
+                    getWidth();
+
+            float h =
+                    getHeight();
 
             float shortSide =
-                    Math.min(w, h);
+                    Math.min(
+                            w,
+                            h
+                    );
 
             float margin =
                     clamp(
@@ -1091,7 +1268,9 @@ public class MainActivity extends Activity {
                     );
 
             p.setColor(panel);
-            p.setStyle(Paint.Style.FILL);
+            p.setStyle(
+                    Paint.Style.FILL
+            );
 
             c.drawRoundRect(
                     card,
@@ -1142,7 +1321,9 @@ public class MainActivity extends Activity {
                             );
 
             p.setTypeface(
-                    android.graphics.Typeface.DEFAULT_BOLD
+                    android.graphics
+                            .Typeface
+                            .DEFAULT_BOLD
             );
 
             p.setTextSize(
@@ -1150,7 +1331,10 @@ public class MainActivity extends Activity {
             );
 
             p.setColor(text);
-            p.setStyle(Paint.Style.FILL);
+
+            p.setStyle(
+                    Paint.Style.FILL
+            );
 
             String displayFlight =
                     route != null
@@ -1175,11 +1359,17 @@ public class MainActivity extends Activity {
                     callsignSize
                             * 0.26f;
 
-            if (route != null
-                    && notEmpty(route.airline)) {
+            if (
+                    route != null
+                            && notEmpty(
+                                    route.airline
+                            )
+            ) {
 
                 p.setTypeface(
-                        android.graphics.Typeface.DEFAULT
+                        android.graphics
+                                .Typeface
+                                .DEFAULT
                 );
 
                 p.setTextSize(
@@ -1223,7 +1413,9 @@ public class MainActivity extends Activity {
                     planeSize,
                     aircraft.track == null
                             ? 0
-                            : aircraft.track.floatValue()
+                            : aircraft
+                            .track
+                            .floatValue()
             );
 
             float y =
@@ -1243,35 +1435,27 @@ public class MainActivity extends Activity {
 
             if (hasRoute) {
 
-                y = drawRoute(
-                        c,
-                        left,
-                        right,
-                        y,
-                        portrait
-                );
+                y =
+                        drawRoute(
+                                c,
+                                left,
+                                right,
+                                y,
+                                portrait
+                        );
             }
 
             /*
-             * Ett litet eget område reserveras längst ned
-             * för källtexten.
+             * Ingen footer eller datatext längre.
+             * Hela återstående nederdelen kan användas
+             * av informationsrutorna.
              */
-
-            float sourceFooterHeight =
-                    portrait
-                            ? dp(30)
-                            : dp(28);
-
-            float footerTop =
-                    card.bottom
-                            - inner
-                            - sourceFooterHeight;
-
             float metricsTop =
                     y + dp(8);
 
             float availableForMetrics =
-                    footerTop
+                    card.bottom
+                            - inner
                             - metricsTop;
 
             drawMetrics(
@@ -1281,42 +1465,6 @@ public class MainActivity extends Activity {
                     metricsTop,
                     availableForMetrics,
                     portrait
-            );
-
-            /*
-             * Källtext under alla informationsrutor.
-             */
-
-            p.setTypeface(
-                    android.graphics.Typeface.DEFAULT
-            );
-
-            p.setTextSize(
-                    clamp(
-                            shortSide
-                                    * 0.016f,
-                            dp(8),
-                            dp(11)
-                    )
-            );
-
-            p.setColor(muted);
-
-            p.setTextAlign(
-                    Paint.Align.CENTER
-            );
-
-            c.drawText(
-                    "",
-                    (left + right) / 2f,
-                    card.bottom
-                            - inner
-                            - dp(5),
-                    p
-            );
-
-            p.setTextAlign(
-                    Paint.Align.LEFT
             );
         }
 
@@ -1377,7 +1525,9 @@ public class MainActivity extends Activity {
                             );
 
             p.setTypeface(
-                    android.graphics.Typeface.DEFAULT_BOLD
+                    android.graphics
+                            .Typeface
+                            .DEFAULT_BOLD
             );
 
             p.setTextSize(
@@ -1407,7 +1557,9 @@ public class MainActivity extends Activity {
             );
 
             p.setTypeface(
-                    android.graphics.Typeface.DEFAULT
+                    android.graphics
+                            .Typeface
+                            .DEFAULT
             );
 
             p.setTextSize(
@@ -1488,10 +1640,16 @@ public class MainActivity extends Activity {
             String[] values = {
 
                     String.format(
-                            new Locale("sv", "SE"),
+                            new Locale(
+                                    "sv",
+                                    "SE"
+                            ),
                             "%.1f KM",
                             aircraft.distanceKm
-                    ).replace('.', ','),
+                    ).replace(
+                            '.',
+                            ','
+                    ),
 
                     aircraft.altitudeM == null
                             ? "-"
@@ -1541,14 +1699,6 @@ public class MainActivity extends Activity {
                     )
                             / cols;
 
-            /*
-             * Rutorna görs bara lite lägre.
-             *
-             * Viktigt: textplaceringen nedan är fast,
-             * så rubriken och värdet går inte ovanpå
-             * varandra när rutan blir lite lägre.
-             */
-
             float preferredBoxHeight =
                     portrait
                             ? dp(78)
@@ -1568,17 +1718,17 @@ public class MainActivity extends Activity {
                             maximumBoxHeight
                     );
 
-            /*
-             * Låt inte rutan bli extremt låg.
-             */
-
             boxH =
                     Math.max(
                             boxH,
                             dp(50)
                     );
 
-            for (int i = 0; i < 4; i++) {
+            for (
+                    int i = 0;
+                    i < 4;
+                    i++
+            ) {
 
                 int row =
                         i / cols;
@@ -1631,9 +1781,10 @@ public class MainActivity extends Activity {
                 /*
                  * Rubrik.
                  */
-
                 p.setTypeface(
-                        android.graphics.Typeface.DEFAULT
+                        android.graphics
+                                .Typeface
+                                .DEFAULT
                 );
 
                 p.setTextSize(
@@ -1659,13 +1810,11 @@ public class MainActivity extends Activity {
 
                 /*
                  * Värde.
-                 *
-                 * Värdet placeras nära nederkanten
-                 * i stället för relativt mot rubriken.
                  */
-
                 p.setTypeface(
-                        android.graphics.Typeface.DEFAULT_BOLD
+                        android.graphics
+                                .Typeface
+                                .DEFAULT_BOLD
                 );
 
                 p.setTextSize(
@@ -1800,7 +1949,10 @@ public class MainActivity extends Activity {
             path.close();
 
             p.setColor(accent);
-            p.setStyle(Paint.Style.FILL);
+
+            p.setStyle(
+                    Paint.Style.FILL
+            );
 
             c.drawPath(
                     path,
@@ -1907,7 +2059,9 @@ public class MainActivity extends Activity {
             );
         }
 
-        private int dp(int value) {
+        private int dp(
+                int value
+        ) {
 
             return Math.round(
                     value
