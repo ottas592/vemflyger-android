@@ -431,14 +431,24 @@ public class MainActivity extends Activity {
                 y = drawRoute(c, left, right, y, portrait);
             }
 
-            float bottom = card.bottom - inner - dp(18);
+            // Reserve a small footer below the four metric cards for the data-source text.
+            // This keeps the source attribution visually separate from the information cards.
+            float sourceFooterHeight = portrait ? dp(30) : dp(24);
+            float bottom = card.bottom - inner - sourceFooterHeight;
             float availableForMetrics = Math.max(dp(90), bottom - y);
             drawMetrics(c, left, right, y + dp(8), availableForMetrics, portrait);
 
             p.setTypeface(android.graphics.Typeface.DEFAULT);
-            p.setTextSize(clamp(shortSide * 0.018f, dp(9), dp(12)));
+            p.setTextSize(clamp(shortSide * 0.016f, dp(8), dp(11)));
             p.setColor(muted);
-            c.drawText("Data: adsb.fi · Route: ADSBDB", left, card.bottom - dp(10), p);
+            p.setTextAlign(Paint.Align.CENTER);
+            c.drawText(
+                    "Data: adsb.fi · Route: ADSBDB",
+                    (left + right) / 2f,
+                    card.bottom - inner + dp(8),
+                    p
+            );
+            p.setTextAlign(Paint.Align.LEFT);
         }
 
         private float drawRoute(Canvas c, float left, float right, float y, boolean portrait) {
