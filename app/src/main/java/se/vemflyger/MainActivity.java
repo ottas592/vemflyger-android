@@ -1307,7 +1307,7 @@ public class MainActivity extends Activity {
             );
 
             c.drawText(
-                    "Data: adsb.fi · Route: ADSBDB",
+                    "",
                     (left + right) / 2f,
                     card.bottom
                             - inner
